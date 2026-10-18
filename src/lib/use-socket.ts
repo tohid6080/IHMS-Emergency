@@ -51,8 +51,10 @@ export function useSocket(handlers: SocketHandlers) {
   }, [handlers])
 
   useEffect(() => {
-    // اتصال از طریق گیت‌وی Caddy
-    const socket = io('/?XTransformPort=3003', {
+    // اتصال سوکت:
+    //  - پیش‌فرض: از طریق گیت‌وی Caddy (همان هاست صفحه + XTransformPort=3003)
+    //  - یا مستقیم با تنظیم NEXT_PUBLIC_SOCKET_URL (مثلاً http://192.168.1.5:3003)
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || '/?XTransformPort=3003', {
       path: '/',
       transports: ['websocket', 'polling'],
       reconnectionDelay: 2000,
