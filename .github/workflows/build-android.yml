@@ -1,0 +1,101 @@
+# ═══════════════════════════════════════════════════════════
+# IHMS Emergency — ساخت خودکار APK اندروید با Capacitor
+#
+# ▶ اجرای دستی: تب Actions → Build Android APK → Run workflow
+#   و وارد کردن آدرس سرور (مثال: https://ihms.example.com)
+#
+# ▶ خروجی: فایل IHMS-Emergency-debug.apk در بخش Releases ریپو
+#
+# ⚠️ توجه: این اپ بک‌اند دارد (API + دیتابیس + سوکت)؛
+#   APK یک پوسته است که به سرور مستقرشده وصل می‌شود.
+#   راهنمای استقرار: پوشه download/ بخش ۶
+# ═══════════════════════════════════════════════════════════
+
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      server_url:
+        description: 'آدرس سرور اپ — https://ihms.example.com یا http://192.168.1.10:3000 برای تست لوکال'
+        required: false
+        default: ''
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-android.yml'
+      - 'capacitor.config.ts'
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Determine server URL
+        id: url
+        run: |
+          URL="${{ github.event.inputs.server_url }}"
+          if [ -z "$URL" ]; then
+            URL="https://ihms.YOUR-DOMAIN.com"
+          fi
+          case "$URL" in
+            http://*) CLEARTEXT="true" ;;
+            *)        CLEARTEXT="false" ;;
+          esac
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "cleartext=$CLEARTEXT" >> "$GITHUB_OUTPUT"
+          echo "🔗 Server URL: $URL (cleartext=$CLEARTEXT)"
+
+      - name: Bake server URL into capacitor.config.ts
+        env:
+          SERVER_URL: ${{ steps.url.outputs.url }}
+          CLEARTEXT: ${{ steps.url.outputs.cleartext }}
+        run: |
+          sed -i "s|https://ihms.YOUR-DOMAIN.com|${SERVER_URL}|g" capacitor.config.ts
+          sed -i "s|cleartext: false,|cleartext: ${CLEARTEXT},|g" capacitor.config.ts
+          grep -A2 "server:" capacitor.config.ts
+
+      - name: Install Capacitor
+        run: npm install --no-save @capacitor/core@^7 @capacitor/cli@^7 @capacitor/android@^7 @capacitor/splash-screen@^7
+
+      - name: Prepare webDir fallback page
+        run: |
+          if [ ! -f public/index.html ]; then
+            printf '<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><title>IHMS Emergency</title><body style="font-family:sans-serif;background:#0f172a;color:#fff;display:grid;place-items:center;height:100vh"><div style="text-align:center"><h1>🚨 IHMS Emergency</h1><p>آدرس سرور تنظیم نشده است — لطفاً APK را با آدرس سرور خود بازسازید.</p></div></body></html>' > public/index.html
+          fi
+
+      - name: Add Android platform & sync
+        run: |
+          npx --yes cap add android
+          npx --yes cap sync android
+
+      - name: Build debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk IHMS-Emergency-debug.apk
+
+      - name: Attach APK to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          files: IHMS-Emergency-debug.apk

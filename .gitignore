@@ -69,3 +69,5 @@ server.log
 .zscripts/
 /tests/
 /examples/
+# internal one-off scripts (may contain credentials handling)
+/scripts/github_release.py
