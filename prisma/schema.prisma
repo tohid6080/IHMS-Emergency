@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// IHMS Emergency — Database Schema
+// ─────────────────────────────────────────────
+
+model Organization {
+  id                 String    @id @default(cuid())
+  name               String
+  code               String    @unique // کد سازمان
+  logoUrl            String?
+  subscriptionEndsAt DateTime  // پایان اشتراک
+  plan               String    @default("PRO") // BASIC / PRO / ENTERPRISE
+  maxUsers           Int       @default(200)
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+
+  users   User[]
+  projects Project[]
+  groups  Group[]
+  alerts  Alert[]
+  contacts Contact[]
+  activationCodes ActivationCode[]
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  location       String?
+  description    String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization     @relation(fields: [organizationId], references: [id])
+  users        UserProject[]
+  alerts       Alert[]
+  contacts     Contact[]
+
+  @@index([organizationId])
+}
+
+model User {
+  id             String   @id @default(cuid())
+  organizationId String
+  username       String   @unique
+  password       String // sha256 hash
+  fullName       String
+  jobTitle       String?  // سمت شغلی
+  personnelCode  String?  // کد پرسنلی
+  phone          String?
+  email          String?
+  role           String   @default("USER") // ADMIN / DISPATCHER / USER
+  accessLevel    String   @default("USER") // ADMIN / MANAGER / USER
+  canActivate    Boolean  @default(false) // مجوز فعال‌سازی شرایط اضطراری
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization      @relation(fields: [organizationId], references: [id])
+  projects     UserProject[]
+  groups       GroupMember[]
+  acknowledgments Acknowledgment[]
+  deliveries   AlertDelivery[]
+  codes        ActivationCode[]  @relation("BoundUser")
+  reportedAlerts Alert[]        @relation("AlertReporter")
+  endedAlerts    Alert[]        @relation("AlertEnder")
+
+  @@index([organizationId])
+}
+
+model UserProject {
+  userId    String
+  projectId String
+  role      String? // نقش در پروژه
+  user      User    @relation(fields: [userId], references: [id])
+  project   Project @relation(fields: [projectId], references: [id])
+
+  @@id([userId, projectId])
+}
+
+model Group {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  kind           String   @default("CUSTOM") // ALL / FIRE / MEDICAL / RESCUE / HSE / PM / SECURITY / OPS / ENV / CUSTOM
+  description    String?
+  isSystem       Boolean  @default(false)
+  color          String   @default("#ef4444")
+  createdAt      DateTime @default(now())
+
+  organization Organization  @relation(fields: [organizationId], references: [id])
+  members      GroupMember[]
+
+  @@index([organizationId])
+}
+
+model GroupMember {
+  id       String  @id @default(cuid())
+  groupId  String
+  userId   String
+  roleInGroup String? // نقش در گروه مثل سرپرست
+  group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+}
+
+model ActivationCode {
+  id             String    @id @default(cuid())
+  organizationId String
+  code           String    @unique
+  label          String?   // برچسب مثل «کد تیم آتش‌نشانی»
+  userId         String?   // کاربر متصل به این کد
+  role           String    @default("USER")
+  canActivate    Boolean   @default(false)
+  expiresAt      DateTime?
+  usedAt         DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+
+  organization Organization      @relation(fields: [organizationId], references: [id])
+  user         User?             @relation("BoundUser", fields: [userId], references: [id])
+
+  @@index([organizationId])
+}
+
+model Alert {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  code           String    @unique // مثل EM-8342
+  type           String // FIRE / MEDICAL / CHEMICAL / GAS / EVACUATION / SECURITY / RESCUE / STRUCTURAL / OTHER
+  level          String // LEVEL_1 / LEVEL_2 / LEVEL_3
+  title          String
+  location       String
+  description    String?
+  instructions   String?
+  reportedById   String
+  targetGroupIds String? // JSON array of group ids used for smart dispatch
+  status         String    @default("ACTIVE") // ACTIVE / ENDED / CANCELLED
+  createdAt      DateTime  @default(now())
+  endedAt        DateTime?
+  endedById      String?
+
+  organization    Organization     @relation(fields: [organizationId], references: [id])
+  project         Project          @relation(fields: [projectId], references: [id])
+  reportedBy      User             @relation("AlertReporter", fields: [reportedById], references: [id])
+  endedBy         User?            @relation("AlertEnder", fields: [endedById], references: [id])
+  deliveries      AlertDelivery[]
+  acknowledgments Acknowledgment[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model AlertDelivery {
+  id      String   @id @default(cuid())
+  alertId String
+  userId  String
+  channel String   @default("PUSH") // PUSH / SMS / EMAIL
+  sentAt  DateTime @default(now())
+
+  alert Alert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([alertId, userId])
+  @@index([userId])
+}
+
+model Acknowledgment {
+  id         String    @id @default(cuid())
+  alertId    String
+  userId     String
+  acknowledgedAt DateTime @default(now())
+  mutedAt    DateTime?
+  device     String?   // PWA / Android / iOS
+
+  alert Alert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([alertId, userId])
+}
+
+model Contact {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String?
+  name           String
+  title          String
+  phone          String
+  phone2         String?
+  email          String?
+  category       String   @default("OTHER") // FIRE / MEDICAL / RESCUE / HSE / PM / SECURITY / OPS / ENV / UTILITY / OTHER
+  isEmergency    Boolean  @default(false)
+  priority       Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  project      Project?     @relation(fields: [projectId], references: [id])
+
+  @@index([organizationId])
+}
