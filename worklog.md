@@ -48,3 +48,25 @@ Stage Summary:
 - حساب‌ها: admin/admin123 | dispatcher/123456 (داود جورکش) | worker1،worker2,.../123456
 - کدهای فعال‌سازی: HSE-CODE-01، FIRE-TEAM-01، WORKER-01، ADMIN-CODE-01
 - نکته فنی مهم: سوکت فقط از طریق گیت‌وی (preview URL) کار می‌کند؛ دسترسی مستقیم به پورت 3000 نشان «قطع» می‌دهد (طبیعی است).
+
+---
+Task ID: 3
+Agent: Main Agent (Z.ai)
+Task: «آماده کن» دوم — آماده‌سازی بسته‌بندی اندروید: اسکلت Capacitor + راهنمای کامل فارسی PDF
+
+Work Log:
+- ساخت capacitor.config.ts (شناسه ir.zarinpars.ihms.emergency، server.url placeholder، اسپلش قرمز)
+- ساخت scripts/build-android.sh (نصب پکیج‌ها → build → cap add/sync → gradle، حالت debug/release)
+- بارگذاری pdf skill و مطالعه کامل زنجیره: SKILL.md، fonts.md، creative-flow.md، overflow.md، pagination.md، typography.md، palette.md، cover.md، cover-backgrounds.md
+- مسیر انتخابی: Creative Flow (سند جریان‌دار RTL فارسی) + صفحه جلد قالب HUD قرمز آینه‌شده RTL
+- تولید پالت tier-محور از palette.cascade با چرخش hue به قرمز برند
+- نگارش HTML راهنما (۷ فصل + جلد + صفحه پایانی): معماری و دیاگرام، پیش‌نیازها، Capacitor گام‌به‌گام + امضا، PWA Builder، FCM دوکاناله، استقرار سرور (Caddyfile + systemd)، عیب‌یابی و چک‌لیست
+- اعتبارسنجی: poster_validate → تبدیل divider به pseudo-element (رفع ۷ خطای text↔line) → اصلاح فاصله hero-fa (۱۷px overlap) → جلد ایزوله: PASS کامل
+- رندر: pagedjs با RTL خراب می‌شود (۳ صفحه) → --nopaged (بومی Chromium): ۱۰ صفحه صحیح
+- شماره‌گذاری صفحات با pypdf (جلد و صفحه پایانی بدون شماره، بدنه ۱-۸)، متادیتا کامل
+- pdf_qa: ۱۰ بررسی پاس، ۱ هشدار non-blocking (عدم تقارن عمدی جلد قالب HUD مجاز طبق spec)
+- بررسی بصری ۵ صفحه کلیدی: جلد/بدنه/جدول/کد/پایانی همگی صحیح؛ صفر کاراکتر U+FFFD
+
+Stage Summary:
+- خروجی: download/IHMS-Android-Deploy-Guide.pdf (۱۰ صفحه، ~۱.۴MB، وکتور) + سورس HTML قابل ویرایش
+- پروژه اکنون «APK-ready» است: کافی است server.url تنظیم و scripts/build-android.sh اجرا شود
