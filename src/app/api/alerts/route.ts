@@ -151,8 +151,8 @@ export const POST = requireAuth(async (user: AuthedUser, req: NextRequest) => {
     .filter((g) => g.kind !== 'ALL')
     .forEach((g) => g.members.forEach((m) => targetIdSet.add(m.userId)))
 
-  // گزارش‌دهنده هم همیشه گیرنده است (برای پایش)
-  targetIdSet.add(user.id)
+  // گزارش‌دهنده گیرنده محسوب نمی‌شود (خودش از طریق پایش زنده دنبال می‌کند)
+  targetIdSet.delete(user.id)
 
   // فقط کاربران فعال سازمان
   const activeUsers = await db.user.findMany({
@@ -198,6 +198,7 @@ export const POST = requireAuth(async (user: AuthedUser, req: NextRequest) => {
       createdAt: alert.createdAt,
       projectId,
       projectName: project.name,
+      reportedById: user.id,
       reportedByName: user.fullName,
       reportedByTitle: user.jobTitle,
     },

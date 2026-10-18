@@ -31,6 +31,7 @@ interface FullAlertState {
     createdAt: string
     projectId: string
     projectName: string
+    reportedById?: string
     reportedByName: string
     reportedByTitle?: string | null
   }
@@ -98,12 +99,14 @@ export default function Page() {
   // ─── سوکت realtime ───
   const onAlertNew = useCallback(
     (p: { alert: FullAlertState['alert']; targets: string[] }) => {
-      const isTarget = p.targets.includes(boot?.user.id || '')
+      const myId = boot?.user.id || ''
+      const isTarget = p.targets.includes(myId)
+      const isMine = p.alert.reportedById === myId
       // به‌روزرسانی لیست هشدارهای فعال
       loadBootstrap()
-      if (!isTarget || notifiedIds.current.has(p.alert.id)) {
-        // اگر گزارش‌دهنده/ادمین هستم فقط اطلاع‌رسانی متنی
-        if (isTarget === false && boot && boot.user.role !== 'USER' && !notifiedIds.current.has(p.alert.id)) {
+      if (!isTarget || isMine || notifiedIds.current.has(p.alert.id)) {
+        // اگر گزارش‌دهنده/ادمین هستم فقط اطلاع‌رسانی متنی (صفحه قرمز فقط برای گیرندگان واقعی)
+        if (!isTarget && !isMine && boot && boot.user.role !== 'USER' && !notifiedIds.current.has(p.alert.id)) {
           notifiedIds.current.add(p.alert.id)
           toast.info(`🚨 شرایط اضطراری «${p.alert.title}» فعال شد`, {
             description: 'برای پایش، بخش هشدارها را ببینید',
