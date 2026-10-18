@@ -24,9 +24,10 @@
 (یا: `git clone https://github.com/tohid6080/IHMS-Emergency.git`)
 
 ### ۳) راه‌اندازی — یک‌بار
-در پوشه پروژه یک **CMD** باز کنید (در نوار آدرس Explorer بنویسید `cmd` و Enter):
+در پوشه پروژه یک **CMD یا PowerShell** باز کنید (در نوار آدرس Explorer بنویسید `cmd` و Enter):
 
 ```bat
+Copy-Item .env.example .env
 npm install
 npx prisma db push
 npx --yes tsx prisma/seed.ts
@@ -34,6 +35,9 @@ cd mini-services\emergency-socket
 npm install
 cd ..\..
 ```
+
+> ⚠️ قدم اول (ساخت `.env`) حتماً لازم است — بدون آن `prisma db push` خطای «Environment variable not found» می‌دهد.
+> اگر پیام «@prisma/client did not initialize yet» دیدید، یعنی `prisma db push` موفق نشده — فایل `.env` را بسازید و دوباره اجرا کنید (db push خودش generate را هم انجام می‌دهد).
 
 ### ۴) پیدا کردن IP کامپیوتر
 در همان CMD بنویسید:
@@ -52,10 +56,20 @@ npx --yes tsx mini-services/emergency-socket/index.ts
 ```
 
 **پنجره ۲ — وب‌اپ** (به‌جای `192.168.1.5` آی‌پی خودتان را بگذارید):
+
+اگر **PowerShell** استفاده می‌کنید:
+```powershell
+$env:NEXT_PUBLIC_SOCKET_URL="http://192.168.1.5:3003"
+npx next dev -p 3000
+```
+
+اگر **CMD** استفاده می‌کنید:
 ```bat
 set NEXT_PUBLIC_SOCKET_URL=http://192.168.1.5:3003
 npx next dev -p 3000
 ```
+
+> ⚠️ متغیر محیطی باید در **همان پنجره‌ای** که `next dev` اجرا می‌شود تنظیم شود، وگرنه گوشی به سوکت وصل نمی‌شود (آیکون «قطع» می‌بیند).
 
 ⚠️ اگر ویندوز پرسید «Allow Node.js on these networks» → تیک **Private networks** را بزنید و Allow کنید.
 
